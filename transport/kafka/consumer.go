@@ -43,7 +43,7 @@ func Consumers(consumers []Consumer) ServerOption {
 }
 
 // Handlers registers a set of handlers to the Server.
-func Handlers(handlers []Handler) ServerOption {
+func Handlers(handlers ...Handler) ServerOption {
 	return func(server *Server) {
 		for _, handler := range handlers {
 			server.handlers[handler.Topic()] = handler
