@@ -34,7 +34,7 @@ func Logger(logger log.Logger) GroupConsumerOption {
 }
 
 // NewGroupConsumer inits a consumer group consumer
-func NewGroupConsumer(brokers string, topics []string, group string, opts ...GroupConsumerOption) (*GroupConsumer, error) {
+func NewGroupConsumer(brokers string,  group string,topics []string,  opts ...GroupConsumerOption) (*GroupConsumer, error) {
 	// parse config setting
 	result := &GroupConsumer{
 		brokers:  strings.Split(brokers, ","),
@@ -44,7 +44,9 @@ func NewGroupConsumer(brokers string, topics []string, group string, opts ...Gro
 		handlers: make(map[string]kafka.Handler),
 		logger:   log.NewHelper(log.DefaultLogger),
 	}
-
+	for _, o := range opts {
+		o(result)
+	}
 	kafkaconf := &kafka2.ConfigMap{
 		"api.version.request":       "true",
 		"auto.offset.reset":         "latest",
