@@ -1,4 +1,4 @@
-package main
+package kafka
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	ckafka "github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/pkg/errors"
-	"github.com/xushuhui/kratos-kafka/transport/kafka"
+	"github.com/xushuhui/kratos-kafka/transport"
 )
 
 type GroupConsumer struct {
@@ -19,7 +19,7 @@ type GroupConsumer struct {
 	group    string
 	ready    chan struct{}
 	consumer *ckafka.Consumer
-	handlers map[string]kafka.Handler
+	handlers map[string]transport.Handler
 	logger   *log.Helper
 }
 
@@ -41,7 +41,7 @@ func NewGroupConsumer(brokers string,  group string,topics []string,  opts ...Gr
 		topics:   topics,
 		group:    group,
 		ready:    make(chan struct{}),
-		handlers: make(map[string]kafka.Handler),
+		handlers: make(map[string]transport.Handler),
 		logger:   log.NewHelper(log.DefaultLogger),
 	}
 	for _, o := range opts {
@@ -75,7 +75,7 @@ func (c *GroupConsumer) Topics() []string {
 }
 
 // RegisterHandler registers a handler to handle the messages of a specific topic
-func (c *GroupConsumer) RegisterHandler(handler kafka.Handler) {
+func (c *GroupConsumer) RegisterHandler(handler transport.Handler) {
 	c.handlers[handler.Topic()] = handler
 }
 
