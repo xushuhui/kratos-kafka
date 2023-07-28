@@ -1,4 +1,4 @@
-package consumer
+package main
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	kafka2 "github.com/confluentinc/confluent-kafka-go/kafka"
+	ckafka "github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/pkg/errors"
 	"github.com/xushuhui/kratos-kafka/transport/kafka"
@@ -18,7 +18,7 @@ type GroupConsumer struct {
 	topics   []string
 	group    string
 	ready    chan struct{}
-	consumer *kafka2.Consumer
+	consumer *ckafka.Consumer
 	handlers map[string]kafka.Handler
 	logger   *log.Helper
 }
@@ -47,7 +47,7 @@ func NewGroupConsumer(brokers string,  group string,topics []string,  opts ...Gr
 	for _, o := range opts {
 		o(result)
 	}
-	kafkaconf := &kafka2.ConfigMap{
+	kafkaconf := &ckafka.ConfigMap{
 		"api.version.request":       "true",
 		"auto.offset.reset":         "latest",
 		"heartbeat.interval.ms":     3000,
@@ -59,7 +59,7 @@ func NewGroupConsumer(brokers string,  group string,topics []string,  opts ...Gr
 	kafkaconf.SetKey("group.id", group)
 	kafkaconf.SetKey("enable.auto.commit", "false")
 	kafkaconf.SetKey("security.protocol", "plaintext")
-	consumer, err := kafka2.NewConsumer(kafkaconf)
+	consumer, err := ckafka.NewConsumer(kafkaconf)
 	if err != nil {
 		return nil, errors.Wrap(err, "init sarama kafka client error")
 	}
