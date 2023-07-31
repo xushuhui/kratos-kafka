@@ -2,47 +2,35 @@ package kafka
 
 import (
 	"context"
-
-	"strings"
 	"sync"
-
-	ckafka "github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/go-kratos/kratos/v2/log"
+	ckafka "github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/pkg/errors"
 	"github.com/xushuhui/kratos-kafka/transport"
 )
 
 type GroupConsumer struct {
 	// config setting
-	brokers  []string
+	brokers  string
 	topics   []string
 	group    string
 	ready    chan struct{}
 	consumer *ckafka.Consumer
 	handlers map[string]transport.Handler
-	logger   *log.Helper
 }
 
 // ConsumerOption is a GroupConsumer option.
 type GroupConsumerOption func(*GroupConsumer)
 
-// Logger with the specify logger
-func Logger(logger log.Logger) GroupConsumerOption {
-	return func(c *GroupConsumer) {
-		c.logger = log.NewHelper(logger)
-	}
-}
-
 // NewGroupConsumer inits a consumer group consumer
-func NewGroupConsumer(brokers string,  group string,topics []string,  opts ...GroupConsumerOption) (*GroupConsumer, error) {
+func NewGroupConsumer(brokers string, group string, topics []string, opts ...GroupConsumerOption) (*GroupConsumer, error) {
 	// parse config setting
 	result := &GroupConsumer{
-		brokers:  strings.Split(brokers, ","),
+		brokers:  brokers,
 		topics:   topics,
 		group:    group,
 		ready:    make(chan struct{}),
 		handlers: make(map[string]transport.Handler),
-		logger:   log.NewHelper(log.DefaultLogger),
 	}
 	for _, o := range opts {
 		o(result)
@@ -54,11 +42,13 @@ func NewGroupConsumer(brokers string,  group string,topics []string,  opts ...Gr
 		"session.timeout.ms":        30000,
 		"max.poll.interval.ms":      120000,
 		"fetch.max.bytes":           1024000,
-		"max.partition.fetch.bytes": 256000}
-	kafkaconf.SetKey("bootstrap.servers", brokers)
-	kafkaconf.SetKey("group.id", group)
-	kafkaconf.SetKey("enable.auto.commit", "false")
-	kafkaconf.SetKey("security.protocol", "plaintext")
+		"max.partition.fetch.bytes": 256000,
+		"bootstrap.servers":         brokers,
+		"group.id":                  group,
+		"enable.auto.commit":        "false",
+		"security.protocol":         "plaintext",
+	}
+
 	consumer, err := ckafka.NewConsumer(kafkaconf)
 	if err != nil {
 		return nil, errors.Wrap(err, "init sarama kafka client error")
@@ -93,7 +83,7 @@ func (c *GroupConsumer) Consume(ctx context.Context) error {
 			return errors.Errorf("no handler for topic %s", topic)
 		}
 		if err := c.consumer.Subscribe(topic, nil); err != nil {
-			c.logger.Errorf("consumer %+v consumes error %+v", c, err)
+			log.Errorf("consumer %+v consumes error %+v", c, err)
 			return err
 		}
 		c.handle(ctx, topic)
@@ -109,6 +99,7 @@ func (c *GroupConsumer) Consume(ctx context.Context) error {
 func (c *GroupConsumer) Close() error {
 	return c.consumer.Close()
 }
+
 func (c *GroupConsumer) handle(ctx context.Context, topic string) {
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
@@ -118,18 +109,18 @@ func (c *GroupConsumer) handle(ctx context.Context, topic string) {
 
 			message, err := c.consumer.ReadMessage(-1)
 			if err != nil {
-				c.logger.Errorf("consumer %+v consumes error %+v", c, err)
+				log.Errorf("consumer %+v consumes error %+v", c, err)
 				return
 			}
 
 			// check if context was cancelled, signaling that the consumer should stop
 			if err := ctx.Err(); err != nil {
-				c.logger.Errorf("consumer %+v exits due to context is canceled %+v", c, err)
+				log.Errorf("consumer %+v exits due to context is canceled %+v", c, err)
 				return
 			}
 			if err := c.handlers[topic].Handle(message); err != nil {
 				// make sure you have a way to record or retry the error message
-				c.logger.Errorf("consume message %s of topic %s partition %d error %+v", string(message.Value), topic, message.TopicPartition.Partition, err)
+				log.Errorf("consume message %s of topic %s partition %d error %+v", string(message.Value), topic, message.TopicPartition.Partition, err)
 				continue
 			}
 

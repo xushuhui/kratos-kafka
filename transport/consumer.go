@@ -10,6 +10,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+var _ transport.Server = (*Server)(nil)
+
 // Consumer is the Kafka Consumer interface
 type Consumer interface {
 	Topics() []string
@@ -23,13 +25,10 @@ type Handler interface {
 	Handle(message *kafka.Message) error
 }
 
-var _ transport.Server = (*Server)(nil)
-
 // Server is a Kafka server wrapper
 type Server struct {
 	consumers []Consumer
 	handlers  map[string]Handler
-	logger    log.Helper
 }
 
 // ServerOption is a Kafka server option.
@@ -91,7 +90,7 @@ func (s *Server) Start(ctx context.Context) error {
 			return srvConsumer.Consume(ctx)
 		})
 	}
-
+	log.Info("[Kakfa] server start")
 	return eg.Wait()
 }
 
@@ -100,10 +99,10 @@ func (s *Server) Stop(ctx context.Context) error {
 	var result error
 	for _, consumer := range s.consumers {
 		if err := consumer.Close(); err != nil {
-			s.logger.Errorf("close consumer error: %v", err)
+			log.Errorf("close consumer error: %v", err)
 			result = err
 		}
 	}
-
+	log.Info("[Kakfa] server stopping")
 	return result
 }
