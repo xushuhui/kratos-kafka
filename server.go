@@ -1,4 +1,4 @@
-package transport
+package kafka
 
 import (
 	"context"

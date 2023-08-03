@@ -3,10 +3,10 @@ package kafka
 import (
 	"context"
 	"sync"
-	"github.com/go-kratos/kratos/v2/log"
+
 	ckafka "github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/go-kratos/kratos/v2/log"
 	"github.com/pkg/errors"
-	"github.com/xushuhui/kratos-kafka/transport"
 )
 
 type GroupConsumer struct {
@@ -16,7 +16,7 @@ type GroupConsumer struct {
 	group    string
 	ready    chan struct{}
 	consumer *ckafka.Consumer
-	handlers map[string]transport.Handler
+	handlers map[string]Handler
 }
 
 // ConsumerOption is a GroupConsumer option.
@@ -30,7 +30,7 @@ func NewGroupConsumer(brokers string, group string, topics []string, opts ...Gro
 		topics:   topics,
 		group:    group,
 		ready:    make(chan struct{}),
-		handlers: make(map[string]transport.Handler),
+		handlers: make(map[string]Handler),
 	}
 	for _, o := range opts {
 		o(result)
@@ -65,7 +65,7 @@ func (c *GroupConsumer) Topics() []string {
 }
 
 // RegisterHandler registers a handler to handle the messages of a specific topic
-func (c *GroupConsumer) RegisterHandler(handler transport.Handler) {
+func (c *GroupConsumer) RegisterHandler(handler Handler) {
 	c.handlers[handler.Topic()] = handler
 }
 
