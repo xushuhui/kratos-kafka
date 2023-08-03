@@ -6,6 +6,7 @@ import (
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/go-kratos/kratos/v2/transport"
+
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 )
@@ -51,37 +52,37 @@ func Handlers(handlers ...Handler) ServerOption {
 }
 
 // NewServer creates a Kafka server by options.
-func NewServer(opts ...ServerOption) (*Server, error) {
+func NewServer(opts ...ServerOption) (*Server) {
 	server := &Server{handlers: make(map[string]Handler)}
 
 	for _, o := range opts {
 		o(server)
 	}
 
-	if len(server.consumers) == 0 {
-		return nil, errors.Errorf("no consumers")
-	}
-	if len(server.handlers) == 0 {
-		return nil, errors.Errorf("no handlers")
-	}
-
-	for _, srvConsumer := range server.consumers {
-		for _, topic := range srvConsumer.Topics() {
-			if srvConsumer.HasHandler(topic) {
-				return nil, errors.Errorf("duplicated handler for topic %s", topic)
-			}
-			handler, ok := server.handlers[topic]
-			if !ok {
-				return nil, errors.Errorf("no available handler for topic %s", topic)
-			}
-			srvConsumer.RegisterHandler(handler)
-		}
-	}
-	return server, nil
+	return server
 }
 
 // Start starts the Kafka server
 func (s *Server) Start(ctx context.Context) error {
+	if len(s.consumers) == 0 {
+		return errors.New("no consumers")
+	}
+	if len(s.handlers) == 0 {
+		return errors.New("no handlers")
+	}
+	for _, srvConsumer := range s.consumers {
+		for _, topic := range srvConsumer.Topics() {
+			if srvConsumer.HasHandler(topic) {
+				return errors.Errorf("duplicated handler for topic %s", topic)
+			}
+			handler, ok := s.handlers[topic]
+			if !ok {
+				return errors.Errorf("no available handler for topic %s", topic)
+			}
+			srvConsumer.RegisterHandler(handler)
+		}
+	}
+	
 	eg, ctx := errgroup.WithContext(ctx)
 
 	for _, serverConsumer := range s.consumers {
